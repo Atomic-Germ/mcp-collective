@@ -1,7 +1,6 @@
 import { HNSWLib } from "@langchain/community/vectorstores/hnswlib";
 import { Chroma } from "@langchain/community/vectorstores/chroma";
 import { PineconeStore } from "@langchain/community/vectorstores/pinecone";
-import { Milvus } from "@langchain/community/vectorstores/milvus";
 import type { Document } from "@langchain/core/documents";
 import type { Embeddings } from "@langchain/core/embeddings";
 import type { VectorStoreType } from "../types/index.js";
@@ -45,7 +44,7 @@ export async function createVectorStore(
         return await PineconeStore.fromDocuments(docs, embeddings, config as unknown as PineconeConfig);
       }
     case "milvus":
-      return await Milvus.fromDocuments(docs, embeddings, config);
+      throw new Error("Milvus is not supported in this build. Please install @zilliz/milvus2-sdk-node package.");
     default:
       throw new Error(`Unsupported vector store type: ${type}`);
   }

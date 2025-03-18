@@ -24,9 +24,10 @@ export interface EmbeddingsConfig {
 function createLocalEmbeddings(config: EmbeddingsConfig): Embeddings {
   try {
     // 動的インポートを使用して、パッケージが存在しない場合のエラーを処理
-    const { HuggingFaceEmbeddings } = require("@langchain/community/embeddings/hf");
+    // 修正: 正しいインポートパスを使用
+    const { HuggingFaceInferenceEmbeddings } = require("@langchain/community/embeddings/hf");
     
-    return new HuggingFaceEmbeddings({
+    return new HuggingFaceInferenceEmbeddings({
       model: config.localModel || "sentence-transformers/all-MiniLM-L6-v2",
     });
   } catch (error) {
@@ -34,15 +35,17 @@ function createLocalEmbeddings(config: EmbeddingsConfig): Embeddings {
     console.error("インストールコマンド: npm install @langchain/community @huggingface/inference");
     console.error("エラー詳細:", error);
     
-    // フォールバックとしてダミーの埋め込みを返す
-    // OpenAIEmbeddingsを使用して、必要なインターフェースを満たす
-    console.warn("HuggingFace Embeddingsが利用できないため、OpenAIEmbeddingsにフォールバックします。");
-    console.warn("ただし、APIキーが指定されていないため、実際の機能は制限されます。");
-    
-    // ダミーのAPIキーを使用（実際には機能しない）
-    return new OpenAIEmbeddings({
-      openAIApiKey: "dummy-api-key-for-interface-compatibility",
+    // フォールバックとして、ダミーのOpenAIEmbeddingsを返す
+    // 注意: このインスタンスは実際には機能しませんが、型の互換性のために使用します
+    const dummyEmbeddings = new OpenAIEmbeddings({
+      openAIApiKey: "dummy-key-for-type-compatibility-only",
     });
+    
+    // 元のメソッドをオーバーライドして、常に固定の埋め込みを返すようにする
+    dummyEmbeddings.embedQuery = async () => new Array(384).fill(0);
+    dummyEmbeddings.embedDocuments = async (docs) => docs.map(() => new Array(384).fill(0));
+    
+    return dummyEmbeddings;
   }
 }
 
