@@ -11,6 +11,16 @@ import {
 import { RagService } from './services/rag-service.js';
 import type { SearchRequest, VectorStoreType } from './types/index.js';
 
+// コンソール出力をstderrにリダイレクト
+const originalConsoleLog = console.log;
+const originalConsoleWarn = console.warn;
+console.log = (...args) => {
+  console.error(...args);
+};
+console.warn = (...args) => {
+  console.error(...args);
+};
+
 // 環境変数から設定を取得
 const KNOWLEDGE_BASE_PATH = process.env.KNOWLEDGE_BASE_PATH || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
@@ -30,9 +40,9 @@ if (!KNOWLEDGE_BASE_PATH) {
 
 // OpenAI APIキーが指定されていない場合は警告を表示
 if (!OPENAI_API_KEY) {
-  console.warn('Warning: OPENAI_API_KEY environment variable is not set');
-  console.warn('Falling back to local embeddings (HuggingFace)');
-  console.warn('To use OpenAI embeddings, set the OPENAI_API_KEY environment variable');
+  console.error('Warning: OPENAI_API_KEY environment variable is not set');
+  console.error('Falling back to local embeddings (HuggingFace)');
+  console.error('To use OpenAI embeddings, set the OPENAI_API_KEY environment variable');
 }
 
 class KnowledgeBaseServer {
@@ -175,12 +185,12 @@ class KnowledgeBaseServer {
   async run() {
     try {
       // 起動時にベクトルストアを初期化
-      console.log('Initializing RAG service...');
+      console.error('Initializing RAG service...');
       const loaded = await this.ragService.loadExistingVectorStore();
       if (!loaded) {
         await this.ragService.initialize();
       }
-      console.log('RAG service initialized');
+      console.error('RAG service initialized');
 
       // MCPサーバーを起動
       const transport = new StdioServerTransport();
