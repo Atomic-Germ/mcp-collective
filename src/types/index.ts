@@ -51,7 +51,7 @@ export interface Config {
 /**
  * サポートされているベクトルストアの種類
  */
-export type VectorStoreType = "hnswlib" | "chroma" | "pinecone" | "milvus";
+export type VectorStoreType = "hnswlib" | "chroma" | "pinecone" | "milvus" | "weaviate";
 
 import type { Document } from "@langchain/core/documents";
 import type { Embeddings } from "@langchain/core/embeddings";
@@ -159,6 +159,21 @@ export interface SearchRequest {
    * デフォルト: 5
    */
   limit?: number;
+
+  /**
+   * ハイブリッド検索を使用するかどうか
+   * Weaviateベクトルストアでのみ有効
+   * デフォルト: false
+   */
+  useHybridSearch?: boolean;
+
+  /**
+   * ハイブリッド検索の重み付け係数（0-1）
+   * 0に近いほどキーワード検索（BM25）の重みが大きく、
+   * 1に近いほどベクトル検索の重みが大きくなる
+   * デフォルト: 0.5（均等）
+   */
+  hybridAlpha?: number;
 
   /**
    * 検索のコンテキスト（オプション）
