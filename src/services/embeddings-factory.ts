@@ -1,8 +1,9 @@
 import type { Embeddings } from "@langchain/core/embeddings";
 import { OpenAIEmbeddings } from "@langchain/openai";
+import { OllamaEmbeddings } from "@langchain/ollama";
 
 // 埋め込みモデルの型
-export type EmbeddingType = "openai" | "local";
+export type EmbeddingType = "openai" | "local" | "ollama";
 
 export interface EmbeddingsConfig {
   // 共通設定
@@ -15,6 +16,25 @@ export interface EmbeddingsConfig {
   // ローカルモデル固有の設定
   localModel?: string;
   localConfig?: Record<string, unknown>;
+  
+  // Ollama固有の設定
+  ollamaBaseUrl?: string;
+  ollamaModel?: string;
+}
+
+/**
+ * OllamaEmbeddingsを使用するOllama埋め込みモデルを作成
+ */
+function createOllamaEmbeddings(config: EmbeddingsConfig): Embeddings {
+  // 日本語のテキストを適切に処理するための設定
+  return new OllamaEmbeddings({
+    baseUrl: config.ollamaBaseUrl || "http://localhost:11434",
+    model: config.ollamaModel || "llama3",
+    // 日本語のテキストを適切に処理するための設定
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
 }
 
 /**
@@ -55,11 +75,17 @@ function createLocalEmbeddings(config: EmbeddingsConfig): Embeddings {
  * @returns 埋め込みモデル
  */
 export function createEmbeddings(config: EmbeddingsConfig): Embeddings {
+  // デフォルトでOllamaEmbeddingsを使用
+  if (config.type === "ollama" || !config.type) {
+    console.log("Using Ollama embeddings");
+    return createOllamaEmbeddings(config);
+  }
+
   switch (config.type) {
     case "openai":
       if (!config.openAIApiKey) {
-        console.warn("OpenAI API キーが指定されていません。ローカル埋め込みモデルにフォールバックします。");
-        return createLocalEmbeddings(config);
+        console.warn("OpenAI API キーが指定されていません。Ollama埋め込みモデルにフォールバックします。");
+        return createOllamaEmbeddings(config);
       }
       return new OpenAIEmbeddings({
         openAIApiKey: config.openAIApiKey,
@@ -70,6 +96,7 @@ export function createEmbeddings(config: EmbeddingsConfig): Embeddings {
       return createLocalEmbeddings(config);
     
     default:
-      throw new Error(`Unsupported embedding type: ${config.type}`);
+      console.warn(`Unsupported embedding type: ${config.type}. Using Ollama embeddings instead.`);
+      return createOllamaEmbeddings(config);
   }
 }
