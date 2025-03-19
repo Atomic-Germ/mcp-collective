@@ -69,6 +69,8 @@ MCPサーバーの設定は、各AIアシスタントの設定ファイルに追
 
 `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
+#### HNSWLib（デフォルト）を使用する例
+
 ```json
 {
   "mcpServers": {
@@ -76,15 +78,49 @@ MCPサーバーの設定は、各AIアシスタントの設定ファイルに追
       "command": "node",
       "args": ["/path/to/unify-rag/dist/index.js"],
       "env": {
-        "KNOWLEDGE_BASE_PATH": "/path/to/your/rules",
+        "KNOWLEDGE_BASE_PATH": "/path/to/your/docs",
         "OPENAI_API_KEY": "your-openai-api-key",
         "SIMILARITY_THRESHOLD": "0.7",
         "CHUNK_SIZE": "1000",
-        "CHUNK_OVERLAP": "200"
-      }
+        "CHUNK_OVERLAP": "200",
+        "VECTOR_STORE_TYPE": "hnswlib",
+        "VECTOR_STORE_CONFIG": "{}"
+      },
+      "disabled": false,
+      "autoApprove": []
     }
   }
 }
+```
+
+#### Weaviateを使用する例
+
+```json
+{
+  "mcpServers": {
+    "unified-knowledge": {
+      "command": "node",
+      "args": ["/path/to/unify-rag/dist/index.js"],
+      "env": {
+        "KNOWLEDGE_BASE_PATH": "/path/to/your/docs",
+        "OPENAI_API_KEY": "your-openai-api-key",
+        "SIMILARITY_THRESHOLD": "0.7",
+        "CHUNK_SIZE": "1000",
+        "CHUNK_OVERLAP": "200",
+        "VECTOR_STORE_TYPE": "weaviate",
+        "VECTOR_STORE_CONFIG": "{\"url\":\"http://localhost:8080\",\"className\":\"Document\",\"textKey\":\"content\"}"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
+
+**注意**: Weaviateを使用する場合は、事前にWeaviateサーバーを起動しておく必要があります。以下のコマンドで起動できます：
+
+```bash
+./start-weaviate.sh
 ```
 
 ## 開発
@@ -239,8 +275,55 @@ interface SearchResult {
 - **Chroma**: オープンソースのベクトルデータベース
 - **Pinecone**: マネージドベクトルデータベースサービス（API キーが必要）
 - **Milvus**: 大規模なベクトル検索エンジン
+- **Weaviate**: スキーマファーストのベクトルデータベース（Docker必須）
 
 各ベクトルストアは抽象化されたインターフェースを通じて利用され、必要に応じて簡単に切り替えることができます。
+
+### ベクトルストア環境の操作方法
+
+#### HNSWLib（デフォルト）
+
+HNSWLibはローカルファイルシステムにベクトルストアを保存するため、特別な環境設定は不要です。
+
+ベクトルストアの再構築：
+```bash
+./rebuild-vector-store-hnsw.sh
+```
+
+#### Weaviate
+
+Weaviateを使用するには、Dockerが必要です。
+
+1. Weaviate環境の起動：
+```bash
+./start-weaviate.sh
+```
+
+2. ベクトルストアの再構築：
+```bash
+./rebuild-vector-store-weaviate.sh
+```
+
+3. Weaviateの状態確認：
+```bash
+curl http://localhost:8080/v1/.well-known/ready
+```
+
+4. Weaviate環境の停止：
+```bash
+docker-compose down
+```
+
+5. Weaviateのデータを完全に削除（必要な場合のみ）：
+```bash
+docker-compose down -v
+```
+
+Weaviateの設定は`docker-compose.yml`ファイルで管理されています。デフォルトでは、以下の設定が適用されます：
+- ポート: 8080
+- 認証: 匿名アクセス有効
+- ベクトル化モジュール: なし（外部埋め込みを使用）
+- データ保存: Dockerボリューム（`weaviate_data`）
 
 ## 設定オプション
 
