@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "id": "1",
+  "method": "callTool",
+  "params": {
+    "name": "rag_search",
+    "arguments": {
+      "query": "クリーンアーキテクチャ 依存関係のルール",
+      "limit": 5,
+      "useHybridSearch": true,
+      "hybridAlpha": 0.25
+    }
+  }
+}
