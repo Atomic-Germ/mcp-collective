@@ -24,22 +24,16 @@ async function main() {
   const ragService = new RagService({
     knowledgeBasePath: process.env.KNOWLEDGE_BASE_PATH,
     vectorStoreType: process.env.VECTOR_STORE_TYPE,
-    embeddingType: process.env.OPENAI_API_KEY ? "openai" : "local",
+    embeddingType: process.env.OPENAI_API_KEY ? "openai" : "ollama",
     embeddingConfig: process.env.OPENAI_API_KEY 
       ? { openAIApiKey: process.env.OPENAI_API_KEY }
-      : { localModel: "sentence-transformers/all-MiniLM-L6-v2" }
+      : { ollamaModel: "llama3" }
   });
   
-  // 既存のベクトルストアをロード
-  const loaded = await ragService.loadExistingVectorStore();
-  if (loaded) {
-    console.log('既存のベクトルストアを読み込みました。');
-    console.log('ベクトルストアは既に作成されています。');
-  } else {
-    console.log('既存のベクトルストアが見つかりませんでした。新しく作成します...');
-    await ragService.initialize();
-    console.log('ベクトルストアの作成が完了しました。');
-  }
+  // 強制的に新しいベクトルストアを作成
+  console.log('ベクトルストアを新しく作成します...');
+  await ragService.initialize();
+  console.log('ベクトルストアの作成が完了しました。');
   
   console.log('完了しました。Claude Desktopと連携する準備ができました。');
 }
