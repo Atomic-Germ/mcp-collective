@@ -13,8 +13,6 @@ import { RagService } from './services/rag-service.js';
 import type { SearchRequest, SearchResult, VectorStoreType } from './types/index.js';
 
 // コンソール出力をstderrにリダイレクト
-const originalConsoleLog = console.log;
-const originalConsoleWarn = console.warn;
 console.log = (...args) => {
   console.error(...args);
 };
