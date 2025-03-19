@@ -12,7 +12,11 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:integration": "jest --config jest.integration.config.js",
-    "test:all": "npm test && npm run test:integration"
+    "test:all": "npm test && npm run test:integration",
+    "create-vector-store": "node create-vector-store.js",
+    "create-vector-store:build": "npm run build && npm run create-vector-store",
+    "test-rag": "node test-rag.js",
+    "test-mcp": "node test-mcp-client.js"
   },
   "keywords": [
     "mcp",
@@ -26,6 +30,8 @@
     "@huggingface/inference": "^2.8.1",
     "@langchain/community": "^0.3.36",
     "@langchain/core": "^0.3.42",
+    "@langchain/ollama": "^0.2.0",
+    "@langchain/weaviate": "^0.1.1",
     "@modelcontextprotocol/sdk": "^1.7.0",
     "@types/node": "^22.13.10",
     "@zilliz/milvus2-sdk-node": "^2.5.6",
@@ -33,6 +39,7 @@
     "langchain": "^0.3.19",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2",
+    "weaviate-ts-client": "^2.2.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
