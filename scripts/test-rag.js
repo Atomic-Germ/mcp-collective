@@ -13,7 +13,7 @@ console.log = console.error;
 console.warn = console.error;
 
 // ビルド済みのRAGサービスを使用
-const { RagService } = require('./dist/services/rag-service.js');
+const { RagService } = require('../dist/services/rag-service.js');
 
 async function testSearch() {
   console.log('RAGサービスを使用した検索テストを実行します...');

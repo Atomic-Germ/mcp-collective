@@ -3,9 +3,8 @@
 // このスクリプトは、MCPサーバーにリクエストを送信するためのものです。
 // MCPサーバーが正しく動作しているかどうかを確認します。
 
-const fs = require('fs');
-const path = require('path');
-const { spawn } = require('child_process');
+const fs = require('node:fs');
+const { spawn } = require('node:child_process');
 
 // MCPサーバーを起動する関数
 function startMcpServer() {
@@ -24,7 +23,7 @@ function startMcpServer() {
   };
   
   // MCPサーバーを起動
-  const server = spawn('node', ['dist/index.js'], {
+  const server = spawn('node', ['../dist/index.js'], {
     env,
     stdio: ['pipe', 'pipe', process.stderr],
   });
@@ -54,7 +53,7 @@ function sendRequest(server) {
   console.log('リクエストを送信しています...');
   
   // JSONメッセージをファイルから読み込み、コンパクトな形式に変換
-  const jsonObj = JSON.parse(fs.readFileSync('test-mcp-request.json', 'utf8'));
+  const jsonObj = JSON.parse(fs.readFileSync('../test-mcp-request.json', 'utf8'));
   const messageStr = JSON.stringify(jsonObj);
   
   // 送信前にJSONの形式を確認
@@ -94,7 +93,7 @@ function sendRequest(server) {
         const header = buffer.substring(0, headerEnd);
         const lengthMatch = header.match(/Content-Length: (\d+)/i);
         if (lengthMatch) {
-          contentLength = parseInt(lengthMatch[1], 10);
+          contentLength = Number.parseInt(lengthMatch[1], 10);
           buffer = buffer.substring(headerEnd + 4); // 4 = \r\n\r\n の長さ
           headerReceived = true;
           console.log(`ヘッダー受信: Content-Length = ${contentLength}`);

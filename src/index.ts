@@ -69,8 +69,8 @@ class KnowledgeBaseServer {
     // MCPサーバーを初期化
     this.server = new Server(
       {
-        name: 'unified-knowledge-base',
-        version: '0.1.0',
+        name: 'shared-knowledge-base',
+        version: '1.0.0',
       },
       {
         capabilities: {

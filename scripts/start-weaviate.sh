@@ -1,6 +1,6 @@
 #!/bin/bash
 
-docker-compose up -d
+cd .. && docker-compose up -d
 
 echo "Waiting for Weaviate to start..."
 sleep 5

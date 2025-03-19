@@ -1,7 +1,8 @@
-# Unified RAG-enabled MCP Server
+# Shared Knowledge MCP Server
 
 各種AIアシスタント（CLINE, Cursor, Windsurf, Claude Desktop）で共通して使用できるナレッジベースMCPサーバーです。
 Retrieval Augmented Generation (RAG)を活用して、効率的な情報検索と利用を実現します。
+複数のAIアシスタントツール間でナレッジベースを共有することで、一貫した情報アクセスを提供します。
 
 ## 特徴
 
@@ -14,8 +15,8 @@ Retrieval Augmented Generation (RAG)を活用して、効率的な情報検索�
 ## インストール
 
 ```bash
-git clone https://github.com/yourusername/unify-rag.git
-cd unify-rag
+git clone https://github.com/yourusername/shared-knowledge-mcp.git
+cd shared-knowledge-mcp
 npm install
 ```
 
@@ -30,9 +31,9 @@ MCPサーバーの設定は、各AIアシスタントの設定ファイルに追
 ```json
 {
   "mcpServers": {
-    "unified-knowledge": {
+    "shared-knowledge-base": {
       "command": "node",
-      "args": ["/path/to/unify-rag/dist/index.js"],
+      "args": ["/path/to/shared-knowledge-mcp/dist/index.js"],
       "env": {
         "KNOWLEDGE_BASE_PATH": "/path/to/your/rules",
         "OPENAI_API_KEY": "your-openai-api-key",
@@ -51,9 +52,9 @@ MCPサーバーの設定は、各AIアシスタントの設定ファイルに追
 ```json
 {
   "mcpServers": {
-    "unified-knowledge": {
+    "shared-knowledge-base": {
       "command": "node",
-      "args": ["/path/to/unify-rag/dist/index.js"],
+      "args": ["/path/to/shared-knowledge-mcp/dist/index.js"],
       "env": {
         "KNOWLEDGE_BASE_PATH": "/path/to/your/rules",
         "OPENAI_API_KEY": "your-openai-api-key",
@@ -74,9 +75,9 @@ MCPサーバーの設定は、各AIアシスタントの設定ファイルに追
 ```json
 {
   "mcpServers": {
-    "unified-knowledge": {
+    "shared-knowledge-base": {
       "command": "node",
-      "args": ["/path/to/unify-rag/dist/index.js"],
+      "args": ["/path/to/shared-knowledge-mcp/dist/index.js"],
       "env": {
         "KNOWLEDGE_BASE_PATH": "/path/to/your/docs",
         "OPENAI_API_KEY": "your-openai-api-key",
@@ -98,9 +99,9 @@ MCPサーバーの設定は、各AIアシスタントの設定ファイルに追
 ```json
 {
   "mcpServers": {
-    "unified-knowledge": {
+    "shared-knowledge-base": {
       "command": "node",
-      "args": ["/path/to/unify-rag/dist/index.js"],
+      "args": ["/path/to/shared-knowledge-mcp/dist/index.js"],
       "env": {
         "KNOWLEDGE_BASE_PATH": "/path/to/your/docs",
         "OPENAI_API_KEY": "your-openai-api-key",

@@ -13,7 +13,7 @@ console.log = console.error;
 console.warn = console.error;
 
 // ビルド済みのRAGサービスを使用
-const { RagService } = require('./dist/services/rag-service.js');
+const { RagService } = require('../dist/services/rag-service.js');
 
 async function main() {
   console.log('ベクトルストアを事前に作成します...');
