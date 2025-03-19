@@ -1,0 +1,32 @@
+{
+  "hnsw": {
+    "mcpServers": {
+      "unify-rag": {
+        "command": "node",
+        "args": ["/Users/j5ik2o/Sources/unify-rag/dist/index.js"],
+        "env": {
+          "KNOWLEDGE_BASE_PATH": "/Users/j5ik2o/Sources/unify-rag/docs",
+          "VECTOR_STORE_TYPE": "hnswlib",
+          "VECTOR_STORE_CONFIG": "{}"
+        },
+        "disabled": false,
+        "autoApprove": []
+      }
+    }
+  },
+  "weaviate": {
+    "mcpServers": {
+      "unify-rag": {
+        "command": "node",
+        "args": ["/Users/j5ik2o/Sources/unify-rag/dist/index.js"],
+        "env": {
+          "KNOWLEDGE_BASE_PATH": "/Users/j5ik2o/Sources/unify-rag/docs",
+          "VECTOR_STORE_TYPE": "weaviate",
+          "VECTOR_STORE_CONFIG": "{\"url\":\"http://localhost:8080\",\"className\":\"Document\",\"textKey\":\"content\"}"
+        },
+        "disabled": false,
+        "autoApprove": []
+      }
+    }
+  }
+}
