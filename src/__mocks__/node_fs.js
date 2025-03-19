@@ -2,7 +2,7 @@
 const fs = {
   existsSync: (path) => {
     // テスト用のパスが存在するかどうかをシミュレート
-    if (path.includes('test-knowledge-base')) {
+    if (path.includes('test-knowledge-base') || path.includes('docs')) {
       return true;
     }
     if (path.includes('.vector-store')) {

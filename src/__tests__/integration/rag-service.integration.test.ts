@@ -5,7 +5,7 @@ import type { Config as RagConfig, SearchRequest, SearchResult } from '../../typ
 import { jest } from '@jest/globals';
 
 // 統合テスト用の設定
-const TEST_KNOWLEDGE_BASE_PATH = path.resolve(process.cwd(), 'test-knowledge-base');
+const TEST_KNOWLEDGE_BASE_PATH = path.resolve(process.cwd(), 'docs');
 const VECTOR_STORE_PATH = path.join(TEST_KNOWLEDGE_BASE_PATH, '.vector-store');
 
 // テスト後にベクトルストアを削除するヘルパー関数
@@ -17,16 +17,15 @@ const cleanupVectorStore = () => {
 
 describe('RagService Integration Tests', () => {
   let ragService: RagService;
-  const mockOpenAIApiKey = process.env.OPENAI_API_KEY || 'dummy-api-key';
 
   beforeAll(() => {
     // テスト用のナレッジベースディレクトリが存在することを確認
     expect(fs.existsSync(TEST_KNOWLEDGE_BASE_PATH)).toBe(true);
     
     // テスト用のファイルが存在することを確認
-    expect(fs.existsSync(path.join(TEST_KNOWLEDGE_BASE_PATH, 'test1.md'))).toBe(true);
-    expect(fs.existsSync(path.join(TEST_KNOWLEDGE_BASE_PATH, 'test2.md'))).toBe(true);
-    
+    expect(fs.existsSync(path.join(TEST_KNOWLEDGE_BASE_PATH, 'ai-agents-01jpcvxfxa9zn7yzy0qtmgyq96.md'))).toBe(true);
+    expect(fs.existsSync(path.join(TEST_KNOWLEDGE_BASE_PATH, 'development-01jpcvxfxa9zn7yzy0qtmgyq95.md'))).toBe(true);
+
     // 既存のベクトルストアをクリーンアップ
     cleanupVectorStore();
   });
@@ -44,10 +43,8 @@ describe('RagService Integration Tests', () => {
       chunkSize: 500,
       chunkOverlap: 50,
       vectorStoreType: 'hnswlib',
-      embeddingType: "openai",
-      embeddingConfig: {
-        openAIApiKey: mockOpenAIApiKey
-      }
+      embeddingType: "ollama",
+      embeddingConfig: { ollamaModel: "llama3" }
     };
     
     ragService = new RagService(config);
@@ -76,7 +73,7 @@ describe('RagService Integration Tests', () => {
   it('should search and find relevant documents', async () => {
     // 検索リクエスト
     const searchRequest: SearchRequest = {
-      query: 'ベクトルストア',
+      query: '集約の設計セオリとは？',
       limit: 5,
     };
     
@@ -134,7 +131,7 @@ describe('RagService Integration Tests', () => {
       {
         content: 'テストコンテンツ1',
         score: 0.95,
-        source: 'test-knowledge-base/test1.md',
+        source: 'docs/ai-agents-01jpcvxfxa9zn7yzy0qtmgyq96.md',
         documentType: 'markdown',
         summary: '検索結果の要約です。',
         keywords: ['キーワード1', 'キーワード2', 'テスト'],
@@ -143,7 +140,7 @@ describe('RagService Integration Tests', () => {
       {
         content: 'テストコンテンツ2',
         score: 0.85,
-        source: 'test-knowledge-base/test2.md',
+        source: 'docs/development-01jpcvxfxa9zn7yzy0qtmgyq95.md',
         documentType: 'markdown',
         summary: '別の検索結果の要約です。',
         keywords: ['キーワード3', 'キーワード4', 'サンプル'],
