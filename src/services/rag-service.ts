@@ -9,11 +9,15 @@ import { createVectorStore, loadVectorStore } from "./vector-store-factory.js";
 import type { HNSWLib } from "@langchain/community/vectorstores/hnswlib";
 import type { WeaviateStore } from "@langchain/weaviate";
 import { createEmbeddings, type EmbeddingsConfig } from "./embeddings-factory.js";
+import { TranslationService, detectLanguageFromText } from "./translation-service.js";
+
+const normalizeLanguageCode = (value?: string): string | undefined => value?.toLowerCase().split('-')[0];
 
 export class RagService {
   private config: Required<RagConfig>;
   private vectorStore: VectorStore | null = null;
   private embeddingConfig: EmbeddingsConfig;
+  private translationService?: TranslationService;
   
   constructor(config: RagConfig) {
     this.config = {
@@ -32,6 +36,22 @@ export class RagService {
       type: this.config.embeddingType,
       ...this.config.embeddingConfig as Record<string, unknown>,
     };
+
+    if (this.config.translationConfig?.enabled) {
+      if (this.config.translationConfig.apiKey) {
+        this.translationService = new TranslationService(this.config.translationConfig);
+      } else {
+        console.warn("Translation is enabled but no API key was provided. Set HUGGINGFACE_API_KEY to activate translations.");
+      }
+    }
+  }
+
+  private detectLanguage(content: string): string {
+    if (this.translationService) {
+      return this.translationService.detectLanguage(content);
+    }
+
+    return detectLanguageFromText(content);
   }
   /**
    * ナレッジベースのインデックスを作成または更新します
@@ -207,6 +227,8 @@ export class RagService {
           source: doc.metadata.source as string,
         };
 
+        result.language = this.detectLanguage(result.content);
+
         // クリーンアーキテクチャのファイルの場合、スコアを高くする
         if (result.source.includes('clean-architecture')) {
           result.score = 0.99; // 高いスコアを設定
@@ -305,6 +327,49 @@ export class RagService {
           // 簡易的な関連性の説明（実際の実装ではLLMを使用）
           result.relevance = `このドキュメントは検索クエリ "${request.query}" に関連する情報を含んでいます。類似度スコア: ${result.score.toFixed(2)}`;
         }
+      }
+    }
+
+    const requestedTargetLanguage = request.targetLanguage ?? this.config.translationConfig?.defaultTargetLanguage;
+    const normalizedTargetLanguage = normalizeLanguageCode(requestedTargetLanguage);
+    const shouldTranslateResults = Boolean(
+      this.translationService &&
+      normalizedTargetLanguage &&
+      (request.include?.translation ?? Boolean(request.targetLanguage ?? this.config.translationConfig?.defaultTargetLanguage))
+    );
+
+    if (shouldTranslateResults && normalizedTargetLanguage && this.translationService) {
+      await Promise.all(finalResults.map(async (result) => {
+        const sourceLanguage = result.language ?? this.detectLanguage(result.content);
+        if (normalizeLanguageCode(sourceLanguage) === normalizedTargetLanguage) {
+          return;
+        }
+
+        const translation = await this.translationService!.translate({
+          text: result.content,
+          targetLanguage: normalizedTargetLanguage,
+          sourceLanguage,
+        });
+
+        if (translation) {
+          result.translatedContent = translation;
+          result.translationLanguage = normalizedTargetLanguage;
+          result.translationProvider = this.config.translationConfig?.provider ?? "huggingface";
+        }
+      }));
+    }
+
+    if (request.include?.language === false) {
+      for (const result of finalResults) {
+        delete result.language;
+      }
+    }
+
+    if (request.include?.translation === false) {
+      for (const result of finalResults) {
+        delete result.translatedContent;
+        delete result.translationLanguage;
+        delete result.translationProvider;
       }
     }
     

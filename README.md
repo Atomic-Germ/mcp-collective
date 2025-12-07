@@ -1,32 +1,28 @@
 # Shared Knowledge MCP Server
 
-各種AIアシスタント（CLINE, Cursor, Windsurf, Claude Desktop）で共通して使用できるナレッジベースMCPサーバーです。
-Retrieval Augmented Generation (RAG)を活用して、効率的な情報検索と利用を実現します。
-複数のAIアシスタントツール間でナレッジベースを共有することで、一貫した情報アクセスを提供します。
+[English](#english) | [日本語](#日本語)
 
-## 特徴
+## English
 
-- 複数のAIアシスタント間で共通のナレッジベースを使用可能
-- RAGによる高精度な情報検索
-- TypeScriptによる型安全な実装
-- 複数のベクトルストア（HNSWLib, Chroma, Pinecone, Milvus）をサポート
-- 抽象化されたインターフェースによる拡張性
+### Overview
+Shared Knowledge MCP Server is a Retrieval Augmented Generation (RAG) service that exposes a shared knowledge base to multiple AI assistants (CLINE, Cursor, Windsurf, Claude Desktop, etc.) via the Model Context Protocol (MCP). It now ships with first-class multilingual support so English speakers receive the same experience as Japanese speakers—documentation, tooling, and responses are all available in both languages.
 
-## インストール
+### Features
+- **Shared knowledge base** that every assistant can query for consistent answers.
+- **High-accuracy RAG search** with hybrid (vector + keyword) support when using Weaviate.
+- **Type-safe TypeScript implementation** with clear service boundaries.
+- **Multiple vector stores** (HNSWLib, Chroma, Pinecone, Milvus, Weaviate) selectable at runtime.
+- **Built-in translation layer** powered by Hugging Face Inference so search results can be auto-translated (e.g., Japanese → English).
 
+### Installation
 ```bash
 git clone https://github.com/yourusername/shared-knowledge-mcp.git
 cd shared-knowledge-mcp
 npm install
 ```
 
-## 設定
-
-MCPサーバーの設定は、各AIアシスタントの設定ファイルに追加します。
-
-### VSCode (CLINE/Cursor用)
-
-`~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`:
+### Configuration
+Specify the MCP server inside each assistant configuration. Example for VS Code (CLINE / Cursor):
 
 ```json
 {
@@ -36,65 +32,104 @@ MCPサーバーの設定は、各AIアシスタントの設定ファイルに追
       "args": ["/path/to/shared-knowledge-mcp/dist/index.js"],
       "env": {
         "KNOWLEDGE_BASE_PATH": "/path/to/your/rules",
-        "OPENAI_API_KEY": "your-openai-api-key",
-        "SIMILARITY_THRESHOLD": "0.7",
-        "CHUNK_SIZE": "1000",
-        "CHUNK_OVERLAP": "200",
-        "VECTOR_STORE_TYPE": "hnswlib"
-      }
-    }
-  }
-}
-```
-
-### Pineconeを使用する例
-
-```json
-{
-  "mcpServers": {
-    "shared-knowledge-base": {
-      "command": "node",
-      "args": ["/path/to/shared-knowledge-mcp/dist/index.js"],
-      "env": {
-        "KNOWLEDGE_BASE_PATH": "/path/to/your/rules",
-        "OPENAI_API_KEY": "your-openai-api-key",
-        "VECTOR_STORE_TYPE": "pinecone",
-        "VECTOR_STORE_CONFIG": "{\"apiKey\":\"your-pinecone-api-key\",\"environment\":\"your-environment\",\"index\":\"your-index-name\"}"
-      }
-    }
-  }
-}
-```
-
-### Claude Desktop
-
-`~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-#### HNSWLib（デフォルト）を使用する例
-
-```json
-{
-  "mcpServers": {
-    "shared-knowledge-base": {
-      "command": "node",
-      "args": ["/path/to/shared-knowledge-mcp/dist/index.js"],
-      "env": {
-        "KNOWLEDGE_BASE_PATH": "/path/to/your/docs",
         "OPENAI_API_KEY": "your-openai-api-key",
         "SIMILARITY_THRESHOLD": "0.7",
         "CHUNK_SIZE": "1000",
         "CHUNK_OVERLAP": "200",
         "VECTOR_STORE_TYPE": "hnswlib",
-        "VECTOR_STORE_CONFIG": "{}"
-      },
-      "disabled": false,
-      "autoApprove": []
+        "HUGGINGFACE_API_KEY": "your-huggingface-api-key",
+        "DEFAULT_SOURCE_LANGUAGE": "ja",
+        "DEFAULT_TARGET_LANGUAGE": "en"
+      }
     }
   }
 }
 ```
 
-#### Weaviateを使用する例
+> Tip: Pinecone, Weaviate, Milvus, and Chroma configurations follow the same pattern—just change `VECTOR_STORE_TYPE` and provide the corresponding `VECTOR_STORE_CONFIG` JSON.
+
+#### Environment variables
+| Variable | Description | Default |
+| --- | --- | --- |
+| `KNOWLEDGE_BASE_PATH` | Absolute path to the docs / rules directory | (required) |
+| `OPENAI_API_KEY` | Enables OpenAI embeddings; falls back to Ollama if omitted | _none_ |
+| `SIMILARITY_THRESHOLD` | Minimum similarity score (0–1) | `0.7` |
+| `CHUNK_SIZE` | Characters per chunk | `1000` |
+| `CHUNK_OVERLAP` | Overlap between chunks | `200` |
+| `VECTOR_STORE_TYPE` | `hnswlib`, `chroma`, `pinecone`, `milvus`, or `weaviate` | `hnswlib` |
+| `VECTOR_STORE_CONFIG` | JSON string with vector store options | `{}` |
+| `HUGGINGFACE_API_KEY` | Enables the translation layer | _none_ |
+| `DEFAULT_SOURCE_LANGUAGE` | Language code for stored docs | `ja` |
+| `DEFAULT_TARGET_LANGUAGE` | Language code used when no `targetLanguage` is provided in requests | `en` |
+| `TRANSLATION_MODEL` | Optional Hugging Face translation model override | auto |
+
+### Multilingual search & translation
+Set `HUGGINGFACE_API_KEY` to activate translations. When calling `rag_search`, supply `targetLanguage: "en"` (or any BCP-47 code). The server will:
+1. Detect the language of every document chunk.
+2. Return the original text plus `language`, `translatedContent`, `translationLanguage`, and `translationProvider` metadata (unless disabled).
+3. Respect `include.translation` or `include.language` flags if you want to trim the payload.
+
+Example tool invocation:
+```typescript
+const result = await callTool("rag_search", {
+  query: "コミットメッセージのフォーマット",
+  targetLanguage: "en",
+  include: {
+    summary: true,
+    translation: true
+  }
+});
+```
+
+### Tool reference
+`rag_search` accepts the following parameters:
+- `query` (string, required)
+- `limit` (number)
+- `useHybridSearch` (boolean, Weaviate only)
+- `hybridAlpha` (number 0–1)
+- `context` (string)
+- `targetLanguage` / `sourceLanguage`
+- `filter` (`documentTypes`, `sourcePattern`, `dateRange`)
+- `include` (`metadata`, `summary`, `keywords`, `relevance`, `language`, `translation`)
+
+Responses now include language metadata and, when requested, translated content so English-first assistants receive ready-to-use text.
+
+### Development
+```bash
+npm run dev        # Start the MCP server with ts-node
+npm run build      # Bundle via esbuild
+npm run typecheck  # TypeScript type checking
+npm run test       # Jest unit tests
+npm run lint       # Biome linting
+```
+
+### License & contributions
+- License: ISC
+- Contributions: fork → branch → PR. Please include both English & Japanese context (or enable auto-translation) when updating docs.
+
+---
+
+## 日本語
+
+### 概要
+Shared Knowledge MCP Server は、複数のAIアシスタント（CLINE、Cursor、Windsurf、Claude Desktopなど）で共有できるナレッジベースをMCP経由で提供するRAGサーバーです。最新バージョンでは、英語利用者にも同等の体験を提供するため、ドキュメントと検索結果の両方が日英バイリンガルで利用できます。
+
+### 特徴
+- すべてのアシスタントから同じナレッジベースへアクセス可能。
+- RAG +（Weaviate利用時）ハイブリッド検索で高精度な回答を提供。
+- TypeScriptによる型安全な実装と明確なサービス分割。
+- HNSWLib / Chroma / Pinecone / Milvus / Weaviate など複数のベクトルストアをサポート。
+- Hugging Face Inference を利用した自動翻訳レイヤーで、検索結果を英語・日本語に自動翻訳。
+
+### インストール
+```bash
+git clone https://github.com/yourusername/shared-knowledge-mcp.git
+cd shared-knowledge-mcp
+npm install
+```
+
+### 設定
+各アシスタントの設定ファイルにMCPサーバーを追加します。以下は VS Code (CLINE / Cursor) の例です。
 
 ```json
 {
@@ -103,249 +138,69 @@ MCPサーバーの設定は、各AIアシスタントの設定ファイルに追
       "command": "node",
       "args": ["/path/to/shared-knowledge-mcp/dist/index.js"],
       "env": {
-        "KNOWLEDGE_BASE_PATH": "/path/to/your/docs",
+        "KNOWLEDGE_BASE_PATH": "/path/to/your/rules",
         "OPENAI_API_KEY": "your-openai-api-key",
         "SIMILARITY_THRESHOLD": "0.7",
         "CHUNK_SIZE": "1000",
         "CHUNK_OVERLAP": "200",
-        "VECTOR_STORE_TYPE": "weaviate",
-        "VECTOR_STORE_CONFIG": "{\"url\":\"http://localhost:8080\",\"className\":\"Document\",\"textKey\":\"content\"}"
-      },
-      "disabled": false,
-      "autoApprove": []
+        "VECTOR_STORE_TYPE": "hnswlib",
+        "HUGGINGFACE_API_KEY": "your-huggingface-api-key",
+        "DEFAULT_SOURCE_LANGUAGE": "ja",
+        "DEFAULT_TARGET_LANGUAGE": "en"
+      }
     }
   }
 }
 ```
 
-**注意**: Weaviateを使用する場合は、事前にWeaviateサーバーを起動しておく必要があります。以下のコマンドで起動できます：
+Pinecone / Weaviate / Milvus を利用する場合は、`VECTOR_STORE_TYPE` と `VECTOR_STORE_CONFIG` を変更してください。
 
+#### 環境変数
+| 変数 | 説明 | デフォルト |
+| --- | --- | --- |
+| `KNOWLEDGE_BASE_PATH` | 参照するドキュメントディレクトリ | 必須 |
+| `OPENAI_API_KEY` | OpenAI埋め込みを利用（未設定ならOllama） | なし |
+| `SIMILARITY_THRESHOLD` | 類似度スコアの閾値 (0–1) | `0.7` |
+| `CHUNK_SIZE` | チャンクサイズ | `1000` |
+| `CHUNK_OVERLAP` | チャンクの重なり | `200` |
+| `VECTOR_STORE_TYPE` | 利用するベクトルストア | `hnswlib` |
+| `VECTOR_STORE_CONFIG` | ベクトルストア設定(JSON文字列) | `{}` |
+| `HUGGINGFACE_API_KEY` | 翻訳レイヤーを有効化 | なし |
+| `DEFAULT_SOURCE_LANGUAGE` | ドキュメントの既定言語 | `ja` |
+| `DEFAULT_TARGET_LANGUAGE` | `targetLanguage` 未指定時の翻訳先 | `en` |
+| `TRANSLATION_MODEL` | 使用する翻訳モデルを上書き | 自動判定 |
+
+### 多言語検索 / 翻訳
+`HUGGINGFACE_API_KEY` を設定すると翻訳が有効になり、`rag_search` の `targetLanguage` （例: `"ja"`, `"en"`）に合わせて検索結果を翻訳します。レスポンスには以下の追加フィールドが含まれます。
+- `language`: 検出した原文の言語
+- `translatedContent`: 翻訳済みテキスト
+- `translationLanguage`: 翻訳後の言語コード
+- `translationProvider`: 使用した翻訳プロバイダー
+
+出力が冗長な場合は、`include.language` や `include.translation` を `false` に設定して除外できます。
+
+### ツールリファレンス
+`rag_search` で利用可能な主なパラメータ:
+- `query`（必須）
+- `limit`
+- `useHybridSearch` / `hybridAlpha`
+- `context`
+- `targetLanguage` / `sourceLanguage`
+- `filter`（`documentTypes`, `sourcePattern`, `dateRange`）
+- `include`（`metadata`, `summary`, `keywords`, `relevance`, `language`, `translation`）
+
+検索結果はJSONで返され、必要に応じてサマリーや翻訳を追加できます。
+
+### 開発
 ```bash
-./start-weaviate.sh
+npm run dev        # 開発サーバー起動
+npm run build      # 本番ビルド
+npm run typecheck  # 型チェック
+npm run test       # テスト実行
+npm run lint       # Biome によるLint
 ```
 
-## 開発
-
-### 開発用サーバーの起動
-
-```bash
-npm run dev
-```
-
-### ビルド
-
-```bash
-npm run build
-```
-
-### 本番環境での実行
-
-```bash
-npm start
-```
-
-## 使用可能なツール
-
-### rag_search
-
-ナレッジベースから情報を検索します。
-
-#### 検索リクエスト
-
-```typescript
-interface SearchRequest {
-  // 検索クエリ（必須）
-  query: string;
-  
-  // 返す結果の最大数（デフォルト: 5）
-  limit?: number;
-  
-  // 検索のコンテキスト（オプション）
-  context?: string;
-  
-  // フィルタリングオプション（オプション）
-  filter?: {
-    // ドキュメントの種類でフィルタリング（例: ["markdown", "code"]）
-    documentTypes?: string[];
-    
-    // ソースパスのパターンでフィルタリング（例: "*.md"）
-    sourcePattern?: string;
-  };
-  
-  // 結果に含める情報（オプション）
-  include?: {
-    metadata?: boolean;   // メタデータを含める
-    summary?: boolean;    // 要約を生成
-    keywords?: boolean;   // キーワードを抽出
-    relevance?: boolean;  // 関連性の説明を生成
-  };
-}
-```
-
-#### 使用例
-
-基本的な検索：
-```typescript
-const result = await callTool("rag_search", {
-  query: "コミットメッセージのフォーマット",
-  limit: 3
-});
-```
-
-高度な検索：
-```typescript
-const result = await callTool("rag_search", {
-  query: "コミットメッセージのフォーマット",
-  context: "Gitの使い方について調査中",
-  filter: {
-    documentTypes: ["markdown"],
-    sourcePattern: "git-*.md"
-  },
-  include: {
-    summary: true,
-    keywords: true,
-    relevance: true
-  }
-});
-```
-
-#### 検索結果
-
-```typescript
-interface SearchResult {
-  // 検索クエリに関連する文書の内容
-  content: string;
-  
-  // 類似度スコア（0-1）
-  score: number;
-  
-  // ソースファイルのパス
-  source: string;
-  
-  // 位置情報
-  startLine?: number;     // 開始行
-  endLine?: number;       // 終了行
-  startColumn?: number;   // 開始桁
-  endColumn?: number;     // 終了桁
-  
-  // ドキュメントの種類（例: "markdown", "code", "text"）
-  documentType?: string;
-  
-  // 追加情報（include オプションで指定した場合のみ）
-  summary?: string;       // コンテンツの要約
-  keywords?: string[];    // 関連キーワード
-  relevance?: string;     // 関連性の説明
-  metadata?: Record<string, unknown>; // メタデータ
-}
-```
-
-#### レスポンス例
-
-```json
-{
-  "results": [
-    {
-      "content": "# コミットメッセージのフォーマット\n\n以下の形式でコミットメッセージを記述してください：\n\n```\n<type>(<scope>): <subject>\n\n<body>\n\n<footer>\n```\n\n...",
-      "score": 0.92,
-      "source": "/path/to/rules/git-conventions.md",
-      "startLine": 1,
-      "endLine": 10,
-      "startColumn": 1,
-      "endColumn": 35,
-      "documentType": "markdown",
-      "summary": "コミットメッセージのフォーマットについての説明文書",
-      "keywords": ["commit", "message", "format", "type", "scope"],
-      "relevance": "このドキュメントは検索クエリ \"コミットメッセージのフォーマット\" に関連する情報を含んでいます。類似度スコア: 0.92"
-    }
-  ]
-}
-```
-
-これらの拡張された検索機能により、LLMはより正確かつ効率的に情報を処理できるようになります。位置情報、ドキュメントタイプ、要約、キーワードなどの追加情報は、LLMが検索結果をより深く理解し、適切に活用するのに役立ちます。
-
-## 仕組み
-
-1. 起動時に指定されたディレクトリ内のMarkdownファイル（.md, .mdx）とテキストファイル（.txt）を読み込みます
-2. ドキュメントをチャンクに分割し、OpenAI APIを使用してベクトル化します
-3. 選択したベクトルストア（デフォルト: HNSWLib）を使用してベクトルインデックスを作成します
-4. 検索クエリに対して類似度の高いドキュメントを返します
-
-### サポートされているベクトルストア
-
-- **HNSWLib**: ローカルファイルシステムに保存される高速なベクトルストア（デフォルト）
-- **Chroma**: オープンソースのベクトルデータベース
-- **Pinecone**: マネージドベクトルデータベースサービス（API キーが必要）
-- **Milvus**: 大規模なベクトル検索エンジン
-- **Weaviate**: スキーマファーストのベクトルデータベース（Docker必須）
-
-各ベクトルストアは抽象化されたインターフェースを通じて利用され、必要に応じて簡単に切り替えることができます。
-
-### ベクトルストア環境の操作方法
-
-#### HNSWLib（デフォルト）
-
-HNSWLibはローカルファイルシステムにベクトルストアを保存するため、特別な環境設定は不要です。
-
-ベクトルストアの再構築：
-```bash
-./rebuild-vector-store-hnsw.sh
-```
-
-#### Weaviate
-
-Weaviateを使用するには、Dockerが必要です。
-
-1. Weaviate環境の起動：
-```bash
-./start-weaviate.sh
-```
-
-2. ベクトルストアの再構築：
-```bash
-./rebuild-vector-store-weaviate.sh
-```
-
-3. Weaviateの状態確認：
-```bash
-curl http://localhost:8080/v1/.well-known/ready
-```
-
-4. Weaviate環境の停止：
-```bash
-docker-compose down
-```
-
-5. Weaviateのデータを完全に削除（必要な場合のみ）：
-```bash
-docker-compose down -v
-```
-
-Weaviateの設定は`docker-compose.yml`ファイルで管理されています。デフォルトでは、以下の設定が適用されます：
-- ポート: 8080
-- 認証: 匿名アクセス有効
-- ベクトル化モジュール: なし（外部埋め込みを使用）
-- データ保存: Dockerボリューム（`weaviate_data`）
-
-## 設定オプション
-
-| 環境変数 | 説明 | デフォルト値 |
-|----------|------|--------------|
-| KNOWLEDGE_BASE_PATH | ナレッジベースのパス（必須） | - |
-| OPENAI_API_KEY | OpenAI API キー（必須） | - |
-| SIMILARITY_THRESHOLD | 検索時の類似度スコアの閾値（0-1） | 0.7 |
-| CHUNK_SIZE | テキスト分割時のチャンクサイズ | 1000 |
-| CHUNK_OVERLAP | チャンクのオーバーラップサイズ | 200 |
-| VECTOR_STORE_TYPE | 使用するベクトルストアの種類（"hnswlib", "chroma", "pinecone", "milvus"） | "hnswlib" |
-| VECTOR_STORE_CONFIG | ベクトルストアの設定（JSON文字列） | {} |
-
-## ライセンス
-
-ISC
-
-## 貢献
-
-1. Forkする
-2. フィーチャーブランチを作成する (`git checkout -b feature/amazing-feature`)
-3. 変更をコミットする (`git commit -m 'Add some amazing feature'`)
-4. ブランチにプッシュする (`git push origin feature/amazing-feature`)
-5. Pull Requestを作成する
+### ライセンス / 貢献
+- ライセンス: ISC
+- 貢献手順: Fork → ブランチ作成 → 変更コミット → PR作成。
+- ドキュメントを更新する場合は、可能な限り英語と日本語の両方を提供するか、翻訳レイヤーの設定方法を併記してください。

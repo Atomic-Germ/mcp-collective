@@ -30,6 +30,10 @@ const VECTOR_STORE_TYPE = (process.env.VECTOR_STORE_TYPE || 'hnswlib') as Vector
 const VECTOR_STORE_CONFIG = process.env.VECTOR_STORE_CONFIG 
   ? JSON.parse(process.env.VECTOR_STORE_CONFIG) 
   : {};
+const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY || '';
+const DEFAULT_SOURCE_LANGUAGE = process.env.DEFAULT_SOURCE_LANGUAGE || 'ja';
+const DEFAULT_TARGET_LANGUAGE = process.env.DEFAULT_TARGET_LANGUAGE || 'en';
+const TRANSLATION_MODEL = process.env.TRANSLATION_MODEL || '';
 
 // 必須の環境変数をチェック
 if (!KNOWLEDGE_BASE_PATH) {
@@ -61,7 +65,15 @@ class KnowledgeBaseServer {
       embeddingType: OPENAI_API_KEY ? "openai" : "ollama",
       embeddingConfig: OPENAI_API_KEY 
         ? { openAIApiKey: OPENAI_API_KEY }
-        : { ollamaModel: "llama3" }
+        : { ollamaModel: "llama3" },
+      translationConfig: {
+        enabled: Boolean(HUGGINGFACE_API_KEY),
+        provider: HUGGINGFACE_API_KEY ? "huggingface" : undefined,
+        apiKey: HUGGINGFACE_API_KEY || undefined,
+        defaultSourceLanguage: DEFAULT_SOURCE_LANGUAGE,
+        defaultTargetLanguage: DEFAULT_TARGET_LANGUAGE,
+        model: TRANSLATION_MODEL || undefined,
+      }
     });
 
     // MCPサーバーを初期化
@@ -88,28 +100,74 @@ class KnowledgeBaseServer {
       tools: [
         {
           name: 'rag_search',
-          description: 'ナレッジベースから情報を検索します',
+          description: 'ナレッジベースから情報を検索します / Search the shared knowledge base.',
           inputSchema: {
             type: 'object',
             properties: {
               query: {
                 type: 'string',
-                description: '検索クエリ',
+                description: '検索クエリ / Query string',
               },
               limit: {
                 type: 'number',
-                description: '返す結果の最大数',
+                description: '返す結果の最大数 / Maximum number of results to return',
                 default: 10,
               },
               useHybridSearch: {
                 type: 'boolean',
-                description: 'ハイブリッド検索（ベクトル検索 + キーワード検索）を使用するかどうか（Weaviateのみ）',
+                description: 'ハイブリッド検索（ベクトル検索 + キーワード検索）を使用するか（Weaviateのみ） / Enable hybrid (vector + keyword) search (Weaviate only)',
                 default: true,
               },
               hybridAlpha: {
                 type: 'number',
-                description: 'ハイブリッド検索の重み付け係数（0-1）。0に近いほどキーワード検索の重みが大きく、1に近いほどベクトル検索の重みが大きくなる',
+                description: 'ハイブリッド検索の重み付け係数（0-1） / Weight for hybrid search (0 = keyword, 1 = vector)',
                 default: 0.25,
+              },
+              context: {
+                type: 'string',
+                description: '検索コンテキスト / Optional search context',
+              },
+              targetLanguage: {
+                type: 'string',
+                description: '結果を翻訳するターゲット言語（例: "en"） / Target language for translations (e.g., "en")',
+              },
+              sourceLanguage: {
+                type: 'string',
+                description: '入力ドキュメントの既知の言語 / Known source language for the documents',
+              },
+              filter: {
+                type: 'object',
+                description: '追加のフィルタ条件 / Additional filtering options',
+                properties: {
+                  documentTypes: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'ドキュメントタイプでフィルタリング / Filter by document types',
+                  },
+                  sourcePattern: {
+                    type: 'string',
+                    description: 'ソースパスのパターン / Source path glob pattern',
+                  },
+                  dateRange: {
+                    type: 'object',
+                    properties: {
+                      from: { type: 'string' },
+                      to: { type: 'string' },
+                    },
+                  },
+                },
+              },
+              include: {
+                type: 'object',
+                description: '結果に含めるオプション / Additional result payload options',
+                properties: {
+                  metadata: { type: 'boolean' },
+                  summary: { type: 'boolean' },
+                  keywords: { type: 'boolean' },
+                  relevance: { type: 'boolean' },
+                  language: { type: 'boolean' },
+                  translation: { type: 'boolean' },
+                },
               },
             },
             required: ['query'],
@@ -148,12 +206,22 @@ class KnowledgeBaseServer {
         const limit = typeof args.limit === 'number' ? args.limit : undefined;
         const useHybridSearch = typeof args.useHybridSearch === 'boolean' ? args.useHybridSearch : undefined;
         const hybridAlpha = typeof args.hybridAlpha === 'number' ? args.hybridAlpha : undefined;
+        const context = typeof args.context === 'string' ? args.context : undefined;
+        const targetLanguage = typeof args.targetLanguage === 'string' ? args.targetLanguage : undefined;
+        const sourceLanguage = typeof args.sourceLanguage === 'string' ? args.sourceLanguage : undefined;
+        const filter = this.normalizeFilter(args.filter);
+        const include = this.normalizeInclude(args.include);
         
         const searchRequest: SearchRequest = {
           query,
           limit,
           useHybridSearch,
           hybridAlpha,
+          context,
+          targetLanguage,
+          sourceLanguage,
+          filter,
+          include,
         };
 
         // RAG検索を実行
@@ -181,7 +249,7 @@ class KnowledgeBaseServer {
                     {
                       results: [
                         {
-                          content: "検索結果が見つかりませんでした。",
+                          content: "検索結果が見つかりませんでした。/ No matching documents were found.",
                           score: 0,
                           source: "dummy.md"
                         }
@@ -221,7 +289,7 @@ class KnowledgeBaseServer {
                   {
                     results: [
                       {
-                        content: "検索中にエラーが発生しました。",
+                        content: "検索中にエラーが発生しました。/ An error occurred during search.",
                         score: 0,
                         source: "error.md",
                         error: searchError instanceof Error ? searchError.message : String(searchError)
@@ -261,6 +329,67 @@ class KnowledgeBaseServer {
 
     // エラーハンドリング
     this.server.onerror = (error) => console.error('[MCP Error]', error);
+  }
+
+  private normalizeFilter(filterArg: unknown): SearchRequest["filter"] | undefined {
+    if (!filterArg || typeof filterArg !== 'object') {
+      return undefined;
+    }
+
+    const filter = filterArg as Record<string, unknown>;
+    const normalized: NonNullable<SearchRequest["filter"]> = {};
+
+    if (Array.isArray(filter.documentTypes)) {
+      const documentTypes = filter.documentTypes.filter((value): value is string => typeof value === 'string');
+      if (documentTypes.length > 0) {
+        normalized.documentTypes = documentTypes;
+      }
+    }
+
+    if (typeof filter.sourcePattern === 'string') {
+      normalized.sourcePattern = filter.sourcePattern;
+    }
+
+    if (filter.dateRange && typeof filter.dateRange === 'object') {
+      const dateRange = filter.dateRange as Record<string, unknown>;
+      const from = typeof dateRange.from === 'string' ? dateRange.from : undefined;
+      const to = typeof dateRange.to === 'string' ? dateRange.to : undefined;
+      if (from || to) {
+        normalized.dateRange = { from, to };
+      }
+    }
+
+    if (
+      (normalized.documentTypes && normalized.documentTypes.length > 0) ||
+      normalized.sourcePattern ||
+      (normalized.dateRange && (normalized.dateRange.from || normalized.dateRange.to))
+    ) {
+      return normalized;
+    }
+
+    return undefined;
+  }
+
+  private normalizeInclude(includeArg: unknown): SearchRequest["include"] | undefined {
+    if (!includeArg || typeof includeArg !== 'object') {
+      return undefined;
+    }
+
+    const include = includeArg as Record<string, unknown>;
+    const normalized: NonNullable<SearchRequest["include"]> = {};
+    const keys: (keyof NonNullable<SearchRequest["include"]>)[] = ['metadata', 'summary', 'keywords', 'relevance', 'language', 'translation'];
+
+    for (const key of keys) {
+      if (typeof include[key] === 'boolean') {
+        normalized[key] = include[key] as boolean;
+      }
+    }
+
+    if (Object.keys(normalized).length === 0) {
+      return undefined;
+    }
+
+    return normalized;
   }
 
   async run() {

@@ -46,6 +46,43 @@ export interface Config {
    * 埋め込みモデルの設定
    */
   embeddingConfig?: Record<string, unknown>;
+
+  /**
+   * 翻訳設定
+   */
+  translationConfig?: TranslationConfig;
+}
+
+export interface TranslationConfig {
+  /**
+   * 翻訳機能を有効化するかどうか
+   */
+  enabled?: boolean;
+
+  /**
+   * 翻訳プロバイダー
+   */
+  provider?: "huggingface";
+
+  /**
+   * プロバイダーごとのAPIキー
+   */
+  apiKey?: string;
+
+  /**
+   * デフォルトのソース言語（例: "ja"）
+   */
+  defaultSourceLanguage?: string;
+
+  /**
+   * デフォルトのターゲット言語（例: "en"）
+   */
+  defaultTargetLanguage?: string;
+
+  /**
+   * 使用するモデル名
+   */
+  model?: string;
 }
 
 /**
@@ -142,6 +179,26 @@ export interface SearchResult {
    * ドキュメントに関する追加情報
    */
   metadata?: Record<string, unknown>;
+
+  /**
+   * ドキュメントの推定言語（例: "ja", "en"）
+   */
+  language?: string;
+
+  /**
+   * 翻訳済みコンテンツ
+   */
+  translatedContent?: string;
+
+  /**
+   * 翻訳後の言語
+   */
+  translationLanguage?: string;
+
+  /**
+   * 翻訳プロバイダー
+   */
+  translationProvider?: string;
 }
 
 /**
@@ -180,6 +237,16 @@ export interface SearchRequest {
    * 検索をより適切に行うための追加情報
    */
   context?: string;
+
+  /**
+   * 結果を指定した言語に翻訳する
+   */
+  targetLanguage?: string;
+
+  /**
+   * 入力ドキュメントの既知の言語
+   */
+  sourceLanguage?: string;
 
   /**
    * フィルタリングオプション（オプション）
@@ -234,5 +301,15 @@ export interface SearchRequest {
      * デフォルト: false
      */
     relevance?: boolean;
+
+    /**
+     * 結果の言語メタデータを含める
+     */
+    language?: boolean;
+
+    /**
+     * 翻訳済みコンテンツを含める
+     */
+    translation?: boolean;
   };
 }
