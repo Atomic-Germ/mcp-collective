@@ -1,0 +1,15 @@
+[submodule "mcp-consult"]
+	path = mcp-consult
+	url = git@github.com:Atomic-Germ/mcp-consult.git
+[submodule "mcp-bridge"]
+	path = mcp-bridge
+	url = git@github.com:Atomic-Germ/mcp-bridge.git
+[submodule "mcp-creative"]
+	path = mcp-creative
+	url = git@github.com:Atomic-Germ/mcp-creative.git
+[submodule "mcp-dream-weaver"]
+	path = mcp-dream-weaver
+	url = git@github.com:Atomic-Germ/mcp-dream-weaver.git
+[submodule "mcp-resonance"]
+	path = mcp-resonance
+	url = git@github.com:Atomic-Germ/mcp-resonance.git
