@@ -1,9 +1,12 @@
 {
-  "name": "shared-knowledge-mcp",
-  "version": "1.0.0",
+  "name": "mcp-collective",
+  "version": "1.1.0",
   "description": "Shared Knowledge MCP Server for AI Assistants",
   "type": "commonjs",
   "main": "dist/index.js",
+  "bin": {
+    "mcp-collective": "dist/index.js"
+  },
   "scripts": {
     "typecheck": "tsc",
     "build": "node esbuild.config.js",
@@ -11,7 +14,7 @@
     "build:watch": "node esbuild.config.js --watch",
     "start": "node dist/index.js",
     "dev": "ts-node --esm src/index.ts",
-    "clean": "rimraf dist/*",
+    "clean": "rimraf dist/* .tmp *.tgz",
     "test": "jest --no-cache --passWithNoTests",
     "test:watch": "jest --watch",
     "test:integration": "jest --config jest.integration.config.js --no-cache --passWithNoTests",
@@ -39,6 +42,7 @@
     "@huggingface/inference": "^2.8.1",
     "@langchain/community": "^0.3.36",
     "@langchain/core": "^0.3.42",
+    "@langchain/openai": "^0.6.0",
     "@langchain/ollama": "^0.2.0",
     "@langchain/textsplitters": "^0.1.0",
     "@langchain/weaviate": "^0.1.1",
